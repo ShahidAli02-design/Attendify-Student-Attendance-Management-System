@@ -30,6 +30,14 @@ export const StudentAuth: React.FC<StudentAuthProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'login' | 'register' | 'admin'>(defaultTab);
 
+  React.useEffect(() => {
+    if (isOpen) {
+      setActiveTab(defaultTab);
+      setErrorMsg('');
+      setSuccessMsg('');
+    }
+  }, [defaultTab, isOpen]);
+
   // Login form state
   const [loginIdentifier, setLoginIdentifier] = useState('CSE25F145');
   const [loginPassword, setLoginPassword] = useState('password123');

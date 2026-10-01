@@ -20,6 +20,7 @@ import {
   getTodayDateString
 } from './utils/storage';
 import { Navbar } from './components/Navbar';
+import { LandingDashboard } from './components/LandingDashboard';
 import { StudentProfile } from './components/StudentProfile';
 import { AdminDashboard } from './components/AdminDashboard';
 import { StudentAuth } from './components/StudentAuth';
@@ -36,6 +37,7 @@ export default function App() {
 
   // 2. UI Modals & Navigation state
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+  const [authDefaultTab, setAuthDefaultTab] = useState<'login' | 'register' | 'admin'>('login');
   const [isVivaModalOpen, setIsVivaModalOpen] = useState<boolean>(false);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState<boolean>(false);
   const [chatbotExternalQuery, setChatbotExternalQuery] = useState<string | null>(null);
@@ -106,6 +108,25 @@ export default function App() {
       markedBy: 'Faculty Admin',
     };
     setAttendanceList((prev) => [newRecord, ...prev]);
+  };
+
+  // Quick evaluation logins from Landing Dashboard
+  const handleQuickEnterStudent = (rollNo: string) => {
+    const student = students.find((s) => s.rollNo.toUpperCase() === rollNo.toUpperCase()) || students[0];
+    setSession({
+      role: 'student',
+      rollNo: student.rollNo,
+      name: student.name,
+      email: student.email,
+    });
+  };
+
+  const handleQuickEnterAdmin = () => {
+    setSession({
+      role: 'admin',
+      name: 'Faculty Admin',
+      email: 'admin@prpcem.ac.in',
+    });
   };
 
   // Admin marks single student attendance status (Present / Absent)
@@ -200,12 +221,7 @@ export default function App() {
       setStudents(getStoredStudents());
       setAttendanceList(getStoredAttendance());
       setLeaves(getStoredLeaves());
-      setSession({
-        role: 'student',
-        rollNo: 'CSE25F145',
-        name: 'Shahid Ali',
-        email: 'shahid.ali@prpcem.ac.in',
-      });
+      setSession({ role: null });
     }
   };
 
@@ -216,8 +232,12 @@ export default function App() {
       <Navbar
         session={session}
         currentStudent={currentStudent}
+        onGoHome={() => setSession({ role: null })}
         onSwitchRole={handleSwitchRole}
-        onOpenAuth={() => setIsAuthModalOpen(true)}
+        onOpenAuth={(tab) => {
+          setAuthDefaultTab(tab || 'login');
+          setIsAuthModalOpen(true);
+        }}
         onOpenVivaModal={() => setIsVivaModalOpen(true)}
         onResetData={handleResetData}
       />
@@ -225,7 +245,11 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-6 sm:px-6">
         
-        {/* Render Student Profile or Admin Dashboard depending on role */}
+        {/* Render:
+            1. Admin Dashboard if role === 'admin'
+            2. Student Profile if role === 'student'
+            3. Landing Dashboard (College Overview Gateway) if role === null
+        */}
         {session.role === 'admin' ? (
           <AdminDashboard
             students={students}
@@ -244,7 +268,7 @@ export default function App() {
             onAddNewStudent={(newStudent) => setStudents((prev) => [newStudent, ...prev])}
             onUpdateLeaveStatus={handleUpdateLeaveStatus}
           />
-        ) : currentStudent ? (
+        ) : session.role === 'student' && currentStudent ? (
           <StudentProfile
             student={currentStudent}
             attendanceHistory={attendanceList}
@@ -253,15 +277,18 @@ export default function App() {
             onAskChatbot={(q) => setChatbotExternalQuery(q)}
           />
         ) : (
-          <div className="py-20 text-center space-y-4">
-            <h2 className="text-xl font-bold text-slate-900">No active student profile loaded</h2>
-            <button
-              onClick={() => setIsAuthModalOpen(true)}
-              className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow hover:bg-blue-500"
-            >
-              Sign In or Select Student
-            </button>
-          </div>
+          <LandingDashboard
+            students={students}
+            attendanceList={attendanceList}
+            leaves={leaves}
+            onOpenLogin={(tab) => {
+              setAuthDefaultTab(tab || 'login');
+              setIsAuthModalOpen(true);
+            }}
+            onQuickEnterStudent={handleQuickEnterStudent}
+            onQuickEnterAdmin={handleQuickEnterAdmin}
+            onOpenVivaGuide={() => setIsVivaModalOpen(true)}
+          />
         )}
 
       </main>
@@ -273,12 +300,12 @@ export default function App() {
           <div className="flex items-center gap-3">
             <button 
               onClick={() => setIsVivaModalOpen(true)} 
-              className="text-indigo-600 hover:underline font-medium"
+              className="text-blue-700 hover:underline font-semibold"
             >
               Practical Code Concepts Guide
             </button>
             <span>·</span>
-            <span>Local Storage Active</span>
+            <span>Browser LocalStorage Active</span>
           </div>
         </div>
       </footer>
@@ -294,6 +321,7 @@ export default function App() {
       <StudentAuth
         isOpen={isAuthModalOpen}
         students={students}
+        defaultTab={authDefaultTab}
         onClose={() => setIsAuthModalOpen(false)}
         onLoginSuccess={handleLoginSuccess}
         onRegisterStudent={handleRegisterStudent}

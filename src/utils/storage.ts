@@ -81,19 +81,12 @@ export function getStoredSession(): AuthSession {
   try {
     const raw = localStorage.getItem(STORAGE_KEYS.SESSION);
     if (!raw) {
-      // Default to student Shahid Ali for quick practical review if desired, or null
-      const defaultSession: AuthSession = {
-        role: 'student',
-        rollNo: 'CSE25F145',
-        name: 'Shahid Ali',
-        email: 'shahid.ali@prpcem.ac.in',
-      };
-      localStorage.setItem(STORAGE_KEYS.SESSION, JSON.stringify(defaultSession));
+      const defaultSession: AuthSession = { role: null };
       return defaultSession;
     }
     return JSON.parse(raw);
   } catch (e) {
-    return { role: 'student', rollNo: 'CSE25F145', name: 'Shahid Ali' };
+    return { role: null };
   }
 }
 

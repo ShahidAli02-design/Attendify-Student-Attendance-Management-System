@@ -7,13 +7,16 @@ import {
   Code2, 
   LogOut, 
   RotateCcw,
+  Home,
+  LayoutDashboard
 } from 'lucide-react';
 
 interface NavbarProps {
   session: AuthSession;
   currentStudent: Student | null;
+  onGoHome: () => void;
   onSwitchRole: (role: 'student' | 'admin') => void;
-  onOpenAuth: () => void;
+  onOpenAuth: (tab?: 'login' | 'register' | 'admin') => void;
   onOpenVivaModal: () => void;
   onResetData: () => void;
 }
@@ -21,6 +24,7 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({
   session,
   currentStudent,
+  onGoHome,
   onSwitchRole,
   onOpenAuth,
   onOpenVivaModal,
@@ -31,13 +35,19 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
         
         {/* Logo & College Branding */}
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-md shadow-blue-500/20 text-white">
+        <div 
+          onClick={onGoHome}
+          className="flex items-center gap-3 cursor-pointer group"
+          title="Return to College Landing Dashboard"
+        >
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-md shadow-blue-500/20 text-white transition-transform group-hover:scale-105">
             <GraduationCap className="h-6 w-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xl font-bold tracking-tight text-slate-900">Attendify</span>
+              <span className="text-xl font-bold tracking-tight text-slate-900 group-hover:text-blue-600 transition-colors">
+                Attendify
+              </span>
               <span className="hidden rounded bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold tracking-wider text-indigo-700 border border-indigo-200 sm:inline-block">
                 PRPCEM
               </span>
@@ -46,9 +56,24 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Quick Role Switcher & Practical Tools */}
+        {/* Quick Role Switcher, Home Link & Practical Tools */}
         <div className="flex items-center gap-2 sm:gap-3">
           
+          {/* Main Dashboard / Home Link */}
+          <button
+            onClick={onGoHome}
+            className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all ${
+              !session.role
+                ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-2xs'
+                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+            }`}
+            title="Main College Portal Dashboard"
+          >
+            <Home className="h-3.5 w-3.5" />
+            <span className="hidden md:inline">College Dashboard</span>
+            <span className="md:hidden">Home</span>
+          </button>
+
           {/* Viva Practical Guide Button */}
           <button
             onClick={onOpenVivaModal}
@@ -88,8 +113,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           ) : (
             <button
-              onClick={onOpenAuth}
-              className="rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow hover:bg-blue-500"
+              onClick={() => onOpenAuth('login')}
+              className="rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-blue-500 transition-colors"
             >
               Sign In
             </button>
@@ -108,8 +133,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
 
               <button
-                onClick={onOpenAuth}
-                title="Switch Account / Sign In"
+                onClick={onGoHome}
+                title="Sign out & return to College Dashboard"
                 className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-900 hover:bg-slate-50"
               >
                 <LogOut className="h-4 w-4" />
