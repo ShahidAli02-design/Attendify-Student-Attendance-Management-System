@@ -1,0 +1,6 @@
+{
+  "name": "Attendify – Student Attendance Management System",
+  "description": "Comprehensive student attendance management system with student profile, admin dashboard, attendance tracking, and Python-powered AI query assistant.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
