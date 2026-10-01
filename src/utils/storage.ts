@@ -1,5 +1,5 @@
-import { Student, DailyAttendanceRecord, LeaveRequest, AuthSession, AttendanceStatus } from '../types';
-import { INITIAL_STUDENTS, INITIAL_ATTENDANCE, INITIAL_LEAVES, getTodayDateString } from '../data/mockData';
+import { Student, DailyAttendanceRecord, LeaveRequest, AttendanceCorrectionRequest, AuthSession, AttendanceStatus } from '../types';
+import { INITIAL_STUDENTS, INITIAL_ATTENDANCE, INITIAL_LEAVES, INITIAL_CORRECTION_REQUESTS, getTodayDateString } from '../data/mockData';
 
 export { getTodayDateString };
 
@@ -7,6 +7,7 @@ const STORAGE_KEYS = {
   STUDENTS: 'attendify_students_v2',
   ATTENDANCE: 'attendify_attendance_v2',
   LEAVES: 'attendify_leaves_v2',
+  REQUESTS_QUEUE: 'attendify_requests_queue_v2',
   SESSION: 'attendify_session_v2',
 };
 
@@ -74,6 +75,28 @@ export function saveLeaves(leaves: LeaveRequest[]): void {
     localStorage.setItem(STORAGE_KEYS.LEAVES, JSON.stringify(leaves));
   } catch (e) {
     console.error('Failed saving leaves to localStorage', e);
+  }
+}
+
+export function getStoredRequestsQueue(): AttendanceCorrectionRequest[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEYS.REQUESTS_QUEUE);
+    if (!raw) {
+      localStorage.setItem(STORAGE_KEYS.REQUESTS_QUEUE, JSON.stringify(INITIAL_CORRECTION_REQUESTS));
+      return INITIAL_CORRECTION_REQUESTS;
+    }
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error('Failed reading requests queue from localStorage', e);
+    return INITIAL_CORRECTION_REQUESTS;
+  }
+}
+
+export function saveRequestsQueue(requests: AttendanceCorrectionRequest[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.REQUESTS_QUEUE, JSON.stringify(requests));
+  } catch (e) {
+    console.error('Failed saving requests queue to localStorage', e);
   }
 }
 
@@ -182,6 +205,7 @@ export const resetToInitialDemoData = (): void => {
   localStorage.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(INITIAL_STUDENTS));
   localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(INITIAL_ATTENDANCE));
   localStorage.setItem(STORAGE_KEYS.LEAVES, JSON.stringify(INITIAL_LEAVES));
+  localStorage.setItem(STORAGE_KEYS.REQUESTS_QUEUE, JSON.stringify(INITIAL_CORRECTION_REQUESTS));
 };
 
 export interface SessionTrendPoint {

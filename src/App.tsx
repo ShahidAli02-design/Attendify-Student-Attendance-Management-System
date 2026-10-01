@@ -3,6 +3,7 @@ import {
   Student, 
   DailyAttendanceRecord, 
   LeaveRequest, 
+  AttendanceCorrectionRequest,
   AuthSession, 
   AttendanceStatus 
 } from './types';
@@ -13,6 +14,8 @@ import {
   saveAttendance, 
   getStoredLeaves, 
   saveLeaves, 
+  getStoredRequestsQueue,
+  saveRequestsQueue,
   getStoredSession, 
   saveSession, 
   calculateOverallAttendance,
@@ -26,6 +29,7 @@ import { AdminDashboard } from './components/AdminDashboard';
 import { StudentAuth } from './components/StudentAuth';
 import { ChatBot } from './components/ChatBot';
 import { LeaveModal } from './components/LeaveModal';
+import { AttendanceCorrectionModal } from './components/AttendanceCorrectionModal';
 import { VivaCodeModal } from './components/VivaCodeModal';
 
 export default function App() {
@@ -34,6 +38,9 @@ export default function App() {
   const [students, setStudents] = useState<Student[]>(getStoredStudents);
   const [attendanceList, setAttendanceList] = useState<DailyAttendanceRecord[]>(getStoredAttendance);
   const [leaves, setLeaves] = useState<LeaveRequest[]>(getStoredLeaves);
+  
+  // Data Structure: Queue of Attendance Correction Requests
+  const [requestsQueue, setRequestsQueue] = useState<AttendanceCorrectionRequest[]>(getStoredRequestsQueue);
 
   // 2. Active View State: Defaults to College Dashboard so landing portal is always the first screen!
   const [activeView, setActiveView] = useState<ActiveView>('college-dashboard');
@@ -43,6 +50,7 @@ export default function App() {
   const [authDefaultTab, setAuthDefaultTab] = useState<'login' | 'register' | 'admin'>('login');
   const [isVivaModalOpen, setIsVivaModalOpen] = useState<boolean>(false);
   const [isLeaveModalOpen, setIsLeaveModalOpen] = useState<boolean>(false);
+  const [isCorrectionModalOpen, setIsCorrectionModalOpen] = useState<boolean>(false);
   const [chatbotExternalQuery, setChatbotExternalQuery] = useState<string | null>(null);
 
   // Sync to localStorage whenever state updates
@@ -57,6 +65,10 @@ export default function App() {
   useEffect(() => {
     saveLeaves(leaves);
   }, [leaves]);
+
+  useEffect(() => {
+    saveRequestsQueue(requestsQueue);
+  }, [requestsQueue]);
 
   useEffect(() => {
     saveSession(session);
@@ -234,6 +246,38 @@ export default function App() {
     });
   };
 
+  // Student submits attendance correction request -> added to REAR of queue (enqueue)
+  const handleSubmitCorrectionRequest = (request: AttendanceCorrectionRequest) => {
+    setRequestsQueue((prev) => [...prev, request]);
+  };
+
+  // Admin processes FRONT request in FIFO order (dequeue)
+  const handleProcessNextRequest = (action: 'Approved' | 'Rejected', remarks?: string) => {
+    // Find the oldest pending request (Front of Queue)
+    const frontIndex = requestsQueue.findIndex((req) => req.status === 'Pending');
+    if (frontIndex === -1) return;
+
+    const frontReq = requestsQueue[frontIndex];
+
+    // If approved, update student's attendance to Present
+    if (action === 'Approved') {
+      handleToggleStatus(frontReq.rollNo, frontReq.requestedStatus, frontReq.date, frontReq.subject);
+    }
+
+    // Update queue element state
+    setRequestsQueue((prev) => {
+      const copy = [...prev];
+      copy[frontIndex] = {
+        ...copy[frontIndex],
+        status: action,
+        remarks: remarks || (action === 'Approved' ? 'Attendance corrected to Present by Faculty Admin' : 'Dispute rejected by Faculty'),
+        processedAt: `Today, ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+        processedBy: 'Faculty Admin',
+      };
+      return copy;
+    });
+  };
+
   // Student submits leave request
   const handleSubmitLeave = (newLeave: LeaveRequest) => {
     setLeaves((prev) => [newLeave, ...prev]);
@@ -248,11 +292,12 @@ export default function App() {
 
   // Reset to initial demo data
   const handleResetData = () => {
-    if (window.confirm('Reset all demo data (students, attendance, leaves) to fresh initial state?')) {
+    if (window.confirm('Reset all demo data (students, attendance, leaves, correction queue) to fresh initial state?')) {
       resetToInitialDemoData();
       setStudents(getStoredStudents());
       setAttendanceList(getStoredAttendance());
       setLeaves(getStoredLeaves());
+      setRequestsQueue(getStoredRequestsQueue());
       setSession({ role: null });
       setActiveView('college-dashboard');
     }
@@ -288,6 +333,7 @@ export default function App() {
             students={students}
             attendanceList={attendanceList}
             leaves={leaves}
+            requestsQueue={requestsQueue}
             onToggleStatus={handleToggleStatus}
             onBulkMark={handleBulkMark}
             onSelectStudentProfile={(student) => {
@@ -301,13 +347,16 @@ export default function App() {
             }}
             onAddNewStudent={(newStudent) => setStudents((prev) => [newStudent, ...prev])}
             onUpdateLeaveStatus={handleUpdateLeaveStatus}
+            onProcessNextRequest={handleProcessNextRequest}
           />
         ) : activeView === 'student-profile' && currentStudent ? (
           <StudentProfile
             student={currentStudent}
             attendanceHistory={attendanceList}
             leaves={leaves}
+            requestsQueue={requestsQueue}
             onOpenLeaveModal={() => setIsLeaveModalOpen(true)}
+            onOpenCorrectionModal={() => setIsCorrectionModalOpen(true)}
             onAskChatbot={(q) => setChatbotExternalQuery(q)}
           />
         ) : (
@@ -380,6 +429,17 @@ export default function App() {
           student={currentStudent}
           onClose={() => setIsLeaveModalOpen(false)}
           onSubmitLeave={handleSubmitLeave}
+        />
+      )}
+
+      {/* Attendance Correction Modal (Data Structure: Queue enqueue) */}
+      {currentStudent && (
+        <AttendanceCorrectionModal
+          isOpen={isCorrectionModalOpen}
+          student={currentStudent}
+          onClose={() => setIsCorrectionModalOpen(false)}
+          onSubmitRequest={handleSubmitCorrectionRequest}
+          currentQueueSize={requestsQueue.filter((r) => r.status === 'Pending').length}
         />
       )}
 

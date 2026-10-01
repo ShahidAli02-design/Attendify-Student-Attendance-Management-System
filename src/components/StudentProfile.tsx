@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Student, DailyAttendanceRecord, LeaveRequest } from '../types';
+import { Student, DailyAttendanceRecord, LeaveRequest, AttendanceCorrectionRequest } from '../types';
 import { calculateClassesNeeded, getStudentLast7SessionsTrend } from '../utils/storage';
 import { downloadStudentCardPNG } from '../utils/downloadCard';
 import { CardPreviewModal } from './CardPreviewModal';
@@ -27,14 +27,18 @@ import {
   LineChart as LineChartIcon,
   Sparkles,
   CalendarDays,
-  Award
+  Award,
+  FileEdit,
+  Layers
 } from 'lucide-react';
 
 interface StudentProfileProps {
   student: Student;
   attendanceHistory: DailyAttendanceRecord[];
   leaves: LeaveRequest[];
+  requestsQueue: AttendanceCorrectionRequest[];
   onOpenLeaveModal: () => void;
+  onOpenCorrectionModal: () => void;
   onAskChatbot: (question: string) => void;
 }
 
@@ -42,10 +46,12 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
   student,
   attendanceHistory,
   leaves,
+  requestsQueue,
   onOpenLeaveModal,
+  onOpenCorrectionModal,
   onAskChatbot,
 }) => {
-  const [activeTab, setActiveTab] = useState<'trends' | 'overview' | 'simulator' | 'history' | 'leaves'>('trends');
+  const [activeTab, setActiveTab] = useState<'trends' | 'overview' | 'simulator' | 'history' | 'leaves' | 'corrections'>('trends');
   const [simulatorTarget, setSimulatorTarget] = useState<number>(85);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState<boolean>(false);
   const [downloadSuccess, setDownloadSuccess] = useState<boolean>(false);
@@ -63,6 +69,13 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
       (leave) => leave.rollNo.toLowerCase() === student.rollNo.toLowerCase()
     );
   }, [leaves, student.rollNo]);
+
+  // Student's submitted attendance correction requests (Queue)
+  const studentCorrections = useMemo(() => {
+    return requestsQueue.filter(
+      (req) => req.rollNo.toLowerCase() === student.rollNo.toLowerCase()
+    );
+  }, [requestsQueue, student.rollNo]);
 
   const isEligible = student.overallAttendance >= 75;
 
@@ -117,6 +130,16 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            {/* New Data Structure Feature: Attendance Correction Request (FIFO Queue) */}
+            <button
+              onClick={onOpenCorrectionModal}
+              className="flex items-center gap-1.5 rounded-xl bg-indigo-50 border border-indigo-200 px-3.5 py-2 text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition-all shadow-2xs"
+              title="Request Attendance Correction (enqueued into FIFO Queue)"
+            >
+              <FileEdit className="h-4 w-4 text-indigo-600" />
+              <span>Request Correction</span>
+            </button>
+
             <button
               onClick={onOpenLeaveModal}
               className="flex items-center gap-1.5 rounded-xl bg-slate-100 px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200 transition-all border border-slate-200"
@@ -331,6 +354,17 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
               }`}
             >
               Leaves ({studentLeaves.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('corrections')}
+              className={`flex-1 rounded-lg py-2 transition-all flex items-center justify-center gap-1 ${
+                activeTab === 'corrections'
+                  ? 'bg-white text-indigo-700 shadow-xs font-bold'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Layers className="h-3 w-3" />
+              <span>Queue ({studentCorrections.length})</span>
             </button>
           </div>
 
@@ -695,6 +729,111 @@ export const StudentProfile: React.FC<StudentProfileProps> = ({
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Sub-View: Attendance Correction Requests (FIFO Queue) */}
+          {activeTab === 'corrections' && (
+            <div className="rounded-2xl border border-slate-200/90 bg-white p-5 space-y-4 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b border-slate-100 pb-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-extrabold text-slate-900">Attendance Correction Queue</h3>
+                    <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      FIFO Queue
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Disputes are enqueued into the Admin review queue using the First In, First Out (FIFO) principle.
+                  </p>
+                </div>
+
+                <button
+                  onClick={onOpenCorrectionModal}
+                  className="flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-indigo-500 shadow-2xs transition-all"
+                >
+                  <FileEdit className="h-3.5 w-3.5" />
+                  <span>+ New Dispute</span>
+                </button>
+              </div>
+
+              {studentCorrections.length === 0 ? (
+                <div className="py-8 text-center text-xs text-slate-500 space-y-2">
+                  <p>No attendance correction requests submitted for {student.name}.</p>
+                  <p className="text-[11px] text-slate-400">If your attendance was marked absent by mistake, submit a correction dispute to the queue.</p>
+                  <button
+                    onClick={onOpenCorrectionModal}
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50 px-3.5 py-1.5 text-xs font-bold text-indigo-700 hover:bg-indigo-100"
+                  >
+                    <FileEdit className="h-3.5 w-3.5" />
+                    <span>Submit Correction Request</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {studentCorrections.map((req, idx) => {
+                    const isPending = req.status === 'Pending';
+                    const allPending = requestsQueue.filter(r => r.status === 'Pending');
+                    const queueIndex = allPending.findIndex(r => r.id === req.id);
+                    const isFront = queueIndex === 0;
+
+                    return (
+                      <div
+                        key={req.id}
+                        className={`rounded-xl border p-4 text-xs space-y-2 transition-all shadow-2xs ${
+                          isPending 
+                            ? 'border-indigo-200 bg-indigo-50/40' 
+                            : req.status === 'Approved'
+                            ? 'border-emerald-200 bg-emerald-50/30'
+                            : 'border-slate-200 bg-slate-50/50'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-slate-900 text-sm">{req.subject}</span>
+                              <span className="font-mono text-[11px] text-slate-500">({req.date})</span>
+                              {isPending && (
+                                <span className={`font-mono text-[10px] font-black px-2 py-0.5 rounded-full ${
+                                  isFront 
+                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
+                                    : 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                                }`}>
+                                  {isFront ? 'FRONT: Next in Line' : `Queue Position #${queueIndex + 1}`}
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[11px] text-slate-600 mt-0.5">
+                              Status change: <span className="font-bold text-rose-700">{req.currentStatus}</span> → <span className="font-bold text-emerald-700">{req.requestedStatus}</span>
+                            </p>
+                          </div>
+
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                            req.status === 'Approved'
+                              ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                              : req.status === 'Rejected'
+                              ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                              : 'bg-amber-100 text-amber-800 border border-amber-300'
+                          }`}>
+                            {req.status}
+                          </span>
+                        </div>
+
+                        <p className="text-slate-700 bg-white p-2.5 rounded-lg border border-slate-200/80 italic">
+                          "{req.reason}"
+                        </p>
+
+                        <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1">
+                          <span>Submitted: {req.submittedAt}</span>
+                          {req.remarks && (
+                            <span className="font-medium text-slate-700">Remarks: {req.remarks}</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

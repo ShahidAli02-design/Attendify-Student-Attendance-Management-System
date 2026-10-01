@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Student, DailyAttendanceRecord, LeaveRequest, AttendanceStatus } from '../types';
+import { Student, DailyAttendanceRecord, LeaveRequest, AttendanceCorrectionRequest, AttendanceStatus } from '../types';
 import { getTodayDateString, getAttendanceStats } from '../utils/storage';
+import { Queue } from '../utils/Queue';
 import { 
   Users, 
   CheckCircle, 
@@ -11,29 +12,39 @@ import {
   Clock, 
   Check, 
   X, 
-  ChevronRight 
+  ChevronRight,
+  Layers,
+  ArrowRight,
+  Sparkles,
+  CheckCircle2,
+  AlertTriangle,
+  Play
 } from 'lucide-react';
 
 interface AdminDashboardProps {
   students: Student[];
   attendanceList: DailyAttendanceRecord[];
   leaves: LeaveRequest[];
+  requestsQueue: AttendanceCorrectionRequest[];
   onToggleStatus: (rollNo: string, newStatus: AttendanceStatus, date: string, subject?: string) => void;
   onBulkMark: (status: AttendanceStatus, date: string, subject?: string) => void;
   onSelectStudentProfile: (student: Student) => void;
   onAddNewStudent: (newStudent: Student) => void;
   onUpdateLeaveStatus: (leaveId: string, status: 'Approved' | 'Rejected', remarks?: string) => void;
+  onProcessNextRequest: (action: 'Approved' | 'Rejected', remarks?: string) => void;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   students,
   attendanceList,
   leaves,
+  requestsQueue,
   onToggleStatus,
   onBulkMark,
   onSelectStudentProfile,
   onAddNewStudent,
   onUpdateLeaveStatus,
+  onProcessNextRequest,
 }) => {
   const [selectedDate, setSelectedDate] = useState<string>(getTodayDateString());
   const [selectedSubject, setSelectedSubject] = useState<string>('All Subjects');
@@ -43,7 +54,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   
   // Modals inside Admin
   const [showAddStudentModal, setShowAddStudentModal] = useState<boolean>(false);
-  const [activeAdminTab, setActiveAdminTab] = useState<'attendance' | 'leaves'>('attendance');
+  const [activeAdminTab, setActiveAdminTab] = useState<'attendance' | 'queue' | 'leaves'>('attendance');
 
   // New Student form state
   const [newName, setNewName] = useState('');
@@ -51,6 +62,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [newEmail, setNewEmail] = useState('');
   const [newDept, setNewDept] = useState('CSE');
   const [newYear, setNewYear] = useState('2nd Year');
+
+  // Initializing Queue Data Structure (FIFO)
+  const pendingRequests = useMemo(() => {
+    return requestsQueue.filter((r) => r.status === 'Pending');
+  }, [requestsQueue]);
+
+  const processedRequests = useMemo(() => {
+    return requestsQueue.filter((r) => r.status !== 'Pending');
+  }, [requestsQueue]);
+
+  // Instantiating the canonical Queue class
+  const correctionQueue = useMemo(() => {
+    return new Queue<AttendanceCorrectionRequest>(pendingRequests);
+  }, [pendingRequests]);
+
+  const frontRequest = correctionQueue.peek();
+  const queueSize = correctionQueue.size();
+  const isQueueEmpty = correctionQueue.isEmpty();
+  const rearRequest = correctionQueue.getRear();
 
   // Attendance map lookup
   const currentAttendanceMap = useMemo(() => {
@@ -150,7 +180,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   return (
     <div className="space-y-6">
       
-      {/* Exact Header matching User Request: "ADMIN DASHBOARD" */}
+      {/* Header matching User Request: "ADMIN DASHBOARD" */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-slate-200 pb-4">
         <div>
           <div className="flex items-center gap-2">
@@ -185,8 +215,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       </div>
 
-      {/* Exact 3 Metric Cards requested: Total Students 120, Present Today 104, Absent Today 16 */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+      {/* 4 Metric Cards: Total Students 120, Present 104, Absent 16, Correction Queue */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Metric 1: Total Students */}
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-xs">
           <div className="flex items-center justify-between text-slate-500">
@@ -223,28 +253,35 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         </div>
 
-        {/* Metric 4: Pending Leaves / Actions */}
-        <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-5 shadow-xs sm:col-span-3 lg:col-span-1">
-          <div className="flex items-center justify-between text-amber-800">
-            <span className="text-xs font-bold uppercase tracking-wider">Pending Leaves</span>
-            <Clock className="h-5 w-5 text-amber-600" />
+        {/* Metric 4: Data Structure Feature - Correction Requests Queue (FIFO) */}
+        <div 
+          onClick={() => setActiveAdminTab('queue')}
+          className="rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50/80 to-blue-50/80 p-5 shadow-xs cursor-pointer transition-all hover:border-indigo-400 group"
+        >
+          <div className="flex items-center justify-between text-indigo-900">
+            <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+              <Layers className="h-4 w-4 text-indigo-600" />
+              <span>Queue (FIFO)</span>
+            </span>
+            <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-200/70 text-indigo-800">
+              Data Structure
+            </span>
           </div>
           <div className="mt-3 flex items-baseline justify-between">
-            <span className="text-3xl font-black text-amber-800 font-mono">
-              {leaves.filter((l) => l.status === 'Pending').length}
+            <div className="flex items-baseline gap-2">
+              <span className="text-3xl font-black text-indigo-900 font-mono">{queueSize}</span>
+              <span className="text-xs text-indigo-700 font-bold">In Queue</span>
+            </div>
+            <span className="text-xs font-bold text-indigo-700 group-hover:text-indigo-900 underline flex items-center gap-0.5">
+              <span>Open Queue</span>
+              <ChevronRight className="h-3.5 w-3.5" />
             </span>
-            <button
-              onClick={() => setActiveAdminTab('leaves')}
-              className="text-xs font-bold text-amber-900 hover:text-amber-950 underline"
-            >
-              Review Desk →
-            </button>
           </div>
         </div>
       </div>
 
-      {/* Tabs: Attendance Sheet vs Leaves Approval Desk */}
-      <div className="flex border-b border-slate-200">
+      {/* Tabs: Attendance Sheet vs Attendance Request Queue (FIFO) vs Leaves */}
+      <div className="flex border-b border-slate-200 flex-wrap gap-1">
         <button
           onClick={() => setActiveAdminTab('attendance')}
           className={`pb-3 px-4 text-xs font-bold border-b-2 transition-all ${
@@ -255,6 +292,24 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         >
           Daily Attendance Sheet & Marking ({filteredStudents.length} Students)
         </button>
+
+        <button
+          onClick={() => setActiveAdminTab('queue')}
+          className={`pb-3 px-4 text-xs font-bold border-b-2 transition-all flex items-center gap-2 ${
+            activeAdminTab === 'queue'
+              ? 'border-indigo-600 text-indigo-700'
+              : 'border-transparent text-slate-500 hover:text-slate-800'
+          }`}
+        >
+          <Layers className="h-4 w-4" />
+          <span>Attendance Requests Queue (FIFO)</span>
+          <span className={`font-mono text-[10px] px-2 py-0.5 rounded-full font-black ${
+            queueSize > 0 ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-600'
+          }`}>
+            {queueSize}
+          </span>
+        </button>
+
         <button
           onClick={() => setActiveAdminTab('leaves')}
           className={`pb-3 px-4 text-xs font-bold border-b-2 transition-all ${
@@ -267,6 +322,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </button>
       </div>
 
+      {/* TAB 1: DAILY ATTENDANCE SHEET */}
       {activeAdminTab === 'attendance' && (
         <div className="space-y-4">
           
@@ -367,14 +423,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           </div>
 
-          {/* Exact Attendance Table specified in user prompt:
-              --------------------------------
-              Roll No     Name          Status
-              --------------------------------
-              CSE25F145   Shahid Ali    Present
-              CSE25F146   Ahmed Khan    Absent
-              CSE25F147   Rahul Patil   Present
-          */}
+          {/* Attendance Table */}
           <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
             <table className="w-full text-left text-xs">
               <thead className="border-b border-slate-200 bg-slate-50 text-slate-700 uppercase tracking-wider font-bold">
@@ -498,7 +547,324 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
-      {/* Leaves Approval Tab */}
+      {/* TAB 2: DATA STRUCTURE FEATURE: ATTENDANCE REQUESTS (FIFO QUEUE) */}
+      {activeAdminTab === 'queue' && (
+        <div className="space-y-5">
+          
+          {/* FIFO Queue Header & Visual Pipeline Card */}
+          <div className="rounded-2xl border-2 border-indigo-200 bg-gradient-to-r from-indigo-50/80 via-white to-blue-50/80 p-5 shadow-xs space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-indigo-100 pb-3">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-600 text-white shadow-2xs">
+                    DATA STRUCTURE: QUEUE
+                  </span>
+                  <span className="text-xs font-bold text-indigo-900">FIFO (First In, First Out)</span>
+                </div>
+                <h3 className="text-lg font-black text-slate-900 mt-1">ATTENDANCE REQUESTS QUEUE</h3>
+                <p className="text-xs text-slate-600">
+                  Student correction requests are enqueued in FIFO order. Admin clicks <strong>[Process Next Request]</strong> to dequeue and resolve the request at the <strong>Front</strong>.
+                </p>
+              </div>
+
+              {/* Main Process Button */}
+              <button
+                disabled={isQueueEmpty}
+                onClick={() => onProcessNextRequest('Approved', 'Approved via FIFO Queue')}
+                className="flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-3 text-xs font-bold text-white shadow-md shadow-indigo-600/20 hover:bg-indigo-500 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.99]"
+              >
+                <Play className="h-4 w-4 fill-white" />
+                <span>Process Next Request (dequeue)</span>
+              </button>
+            </div>
+
+            {/* Visual Queue Pipeline Display */}
+            <div className="rounded-xl border border-indigo-200 bg-white p-4 space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-indigo-900 flex items-center gap-1.5">
+                  <Layers className="h-4 w-4 text-indigo-600" />
+                  <span>Live Queue Visualizer</span>
+                </span>
+                <span className="font-mono text-[11px] text-slate-500">
+                  size() = {queueSize} · isEmpty() = {isQueueEmpty ? 'true' : 'false'}
+                </span>
+              </div>
+
+              {isQueueEmpty ? (
+                <div className="py-6 text-center text-xs text-slate-500 bg-slate-50 rounded-lg border border-dashed border-slate-200">
+                  <p className="font-bold text-slate-700">Queue is Empty (isEmpty() === true)</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">All attendance correction requests have been processed in FIFO order.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto py-2">
+                  <div className="flex items-center gap-2 min-w-max">
+                    <span className="text-[11px] font-mono font-black text-emerald-800 bg-emerald-100 px-2 py-1 rounded border border-emerald-300">
+                      FRONT (dequeue)
+                    </span>
+                    <ArrowRight className="h-4 w-4 text-slate-400" />
+
+                    {pendingRequests.map((req, idx) => {
+                      const isFront = idx === 0;
+                      const isRear = idx === pendingRequests.length - 1;
+
+                      return (
+                        <React.Fragment key={req.id}>
+                          <div className={`rounded-xl border p-3 min-w-[200px] transition-all shadow-2xs ${
+                            isFront 
+                              ? 'border-indigo-500 bg-indigo-50/90 ring-2 ring-indigo-500/30' 
+                              : isRear 
+                              ? 'border-blue-300 bg-blue-50/60' 
+                              : 'border-slate-200 bg-white'
+                          }`}>
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="font-mono font-bold text-blue-700">{req.rollNo}</span>
+                              <span className={`px-1.5 py-0.2 rounded font-mono font-black text-[9px] ${
+                                isFront ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-700'
+                              }`}>
+                                {isFront ? 'NEXT (peek())' : isRear ? 'REAR (enqueue)' : `#${idx + 1}`}
+                              </span>
+                            </div>
+                            <p className="font-bold text-slate-900 text-xs mt-1 truncate">{req.studentName}</p>
+                            <p className="text-[11px] text-indigo-700 font-semibold">{req.subject}</p>
+                            <p className="text-[10px] text-slate-500 truncate mt-0.5">{req.reason}</p>
+                          </div>
+
+                          {idx < pendingRequests.length - 1 && (
+                            <ArrowRight className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+
+                    <ArrowRight className="h-4 w-4 text-slate-400" />
+                    <span className="text-[11px] font-mono font-black text-blue-800 bg-blue-100 px-2 py-1 rounded border border-blue-300">
+                      REAR (enqueue)
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Front Element Details Card (peek()) */}
+            {frontRequest && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4 space-y-2.5">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-white text-xs font-bold">
+                      1
+                    </span>
+                    <div>
+                      <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wide">
+                        Current Front Element: peek()
+                      </h4>
+                      <p className="text-[11px] text-slate-600">This request is the first in line and will be processed on the next dequeue operation.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => onProcessNextRequest('Approved', 'Approved by Faculty Admin')}
+                      className="rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-2xs transition-colors flex items-center gap-1.5"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      <span>Approve & Mark Present</span>
+                    </button>
+                    <button
+                      onClick={() => onProcessNextRequest('Rejected', 'Insufficient proof of attendance')}
+                      className="rounded-lg bg-rose-600 hover:bg-rose-500 px-3 py-1.5 text-xs font-bold text-white shadow-2xs transition-colors flex items-center gap-1.5"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                      <span>Reject & Dequeue</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="rounded-lg bg-white p-3 border border-emerald-200 text-xs grid grid-cols-1 sm:grid-cols-4 gap-2">
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Student Name</span>
+                    <strong className="text-slate-900">{frontRequest.studentName}</strong>
+                    <span className="font-mono text-blue-700 ml-1 font-bold">({frontRequest.rollNo})</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Subject & Date</span>
+                    <strong className="text-slate-900">{frontRequest.subject}</strong>
+                    <span className="text-slate-500 block text-[10px] font-mono">{frontRequest.date}</span>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Student Clarification</span>
+                    <p className="text-slate-700 italic">"{frontRequest.reason}"</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+          </div>
+
+          {/* Exact Table requested in User Prompt:
+              ATTENDANCE REQUESTS
+              ┌──────┬─────────────┬───────────┐
+              │ Roll │ Student     │ Status    │
+              ├──────┼─────────────┼───────────┤
+              │ 145  │ Shahid Ali  │ Pending   │
+              │ 146  │ Ahmed Khan  │ Pending   │
+              │ 147  │ Rahul Patil │ Pending   │
+              └──────┴─────────────┴───────────┘
+          */}
+          <div className="rounded-xl border border-slate-200 bg-white shadow-xs overflow-hidden">
+            <div className="bg-slate-50 px-5 py-3 border-b border-slate-200 flex items-center justify-between">
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                  ATTENDANCE REQUESTS (QUEUE TABLE)
+                </h4>
+                <p className="text-[11px] text-slate-500">Ordered by arrival time (FIFO: Index 0 is Front, Index N is Rear)</p>
+              </div>
+              <span className="text-xs font-mono font-bold text-slate-600">
+                {pendingRequests.length} Pending
+              </span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="border-b border-slate-200 bg-slate-100/70 text-slate-700 uppercase tracking-wider font-bold">
+                  <tr>
+                    <th className="py-2.5 px-4 font-mono">Queue Pos</th>
+                    <th className="py-2.5 px-4 font-mono">Roll</th>
+                    <th className="py-2.5 px-4">Student</th>
+                    <th className="py-2.5 px-4">Subject</th>
+                    <th className="py-2.5 px-4">Dispute Reason</th>
+                    <th className="py-2.5 px-4 text-center">Status</th>
+                    <th className="py-2.5 px-4 text-right">Queue Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {pendingRequests.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-slate-500">
+                        No pending requests in the queue.
+                      </td>
+                    </tr>
+                  ) : (
+                    pendingRequests.map((req, index) => {
+                      const isFront = index === 0;
+                      const isRear = index === pendingRequests.length - 1;
+
+                      return (
+                        <tr 
+                          key={req.id} 
+                          className={`hover:bg-slate-50/70 transition-colors ${
+                            isFront ? 'bg-indigo-50/40' : ''
+                          }`}
+                        >
+                          {/* Queue Position */}
+                          <td className="py-3 px-4 font-mono">
+                            {isFront ? (
+                              <span className="font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded text-[10px] border border-emerald-300">
+                                FRONT (Next)
+                              </span>
+                            ) : isRear ? (
+                              <span className="font-bold text-blue-800 bg-blue-100 px-2 py-0.5 rounded text-[10px] border border-blue-300">
+                                REAR (#{index + 1})
+                              </span>
+                            ) : (
+                              <span className="font-medium text-slate-600 text-[11px]">
+                                Position #{index + 1}
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Roll No */}
+                          <td className="py-3 px-4 font-mono font-bold text-blue-700">
+                            {req.rollNo}
+                          </td>
+
+                          {/* Student Name */}
+                          <td className="py-3 px-4 font-bold text-slate-900">
+                            {req.studentName}
+                          </td>
+
+                          {/* Subject */}
+                          <td className="py-3 px-4 text-slate-700 font-medium">
+                            {req.subject}
+                          </td>
+
+                          {/* Dispute Reason */}
+                          <td className="py-3 px-4 text-slate-600 max-w-xs truncate" title={req.reason}>
+                            {req.reason}
+                          </td>
+
+                          {/* Status */}
+                          <td className="py-3 px-4 text-center">
+                            <span className="font-bold px-2 py-0.5 rounded-full text-[10px] bg-amber-100 text-amber-800 border border-amber-300">
+                              {req.status}
+                            </span>
+                          </td>
+
+                          {/* Action */}
+                          <td className="py-3 px-4 text-right">
+                            {isFront ? (
+                              <button
+                                onClick={() => onProcessNextRequest('Approved', 'Approved by Faculty Admin')}
+                                className="rounded bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-2.5 py-1 text-[11px] shadow-2xs transition-colors"
+                              >
+                                Process Front
+                              </button>
+                            ) : (
+                              <span className="text-[11px] text-slate-400 italic">
+                                Waiting in Queue
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Processed History Log */}
+          {processedRequests.length > 0 && (
+            <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3 shadow-xs">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Resolved Requests History (Dequeued Log)
+                </h4>
+                <span className="text-xs text-slate-500 font-mono">{processedRequests.length} resolved</span>
+              </div>
+
+              <div className="divide-y divide-slate-100 text-xs">
+                {processedRequests.map((req) => (
+                  <div key={req.id} className="py-2.5 flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <strong className="text-slate-900">{req.studentName}</strong>
+                        <span className="font-mono text-blue-700">({req.rollNo})</span>
+                        <span className="text-slate-500">· {req.subject}</span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 mt-0.5">"{req.reason}"</p>
+                    </div>
+
+                    <div className="text-right">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        req.status === 'Approved'
+                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                          : 'bg-rose-100 text-rose-800 border border-rose-300'
+                      }`}>
+                        {req.status}
+                      </span>
+                      <span className="block text-[10px] text-slate-400 mt-0.5">{req.processedAt || 'Processed'}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+        </div>
+      )}
+
+      {/* TAB 3: LEAVES APPROVAL TAB */}
       {activeAdminTab === 'leaves' && (
         <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-4 shadow-xs">
           <div className="flex items-center justify-between">

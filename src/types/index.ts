@@ -51,6 +51,23 @@ export interface LeaveRequest {
   remarks?: string;
 }
 
+export interface AttendanceCorrectionRequest {
+  id: string;
+  rollNo: string;
+  studentName: string;
+  department: string;
+  date: string;
+  subject: string;
+  currentStatus: AttendanceStatus;
+  requestedStatus: AttendanceStatus;
+  reason: string;
+  status: 'Pending' | 'Approved' | 'Rejected';
+  submittedAt: string;
+  processedAt?: string;
+  processedBy?: string;
+  remarks?: string;
+}
+
 export type UserRole = 'student' | 'admin' | null;
 
 export interface AuthSession {

@@ -1,4 +1,4 @@
-import { Student, DailyAttendanceRecord, LeaveRequest } from '../types';
+import { Student, DailyAttendanceRecord, LeaveRequest, AttendanceCorrectionRequest } from '../types';
 
 export const INITIAL_STUDENTS: Student[] = [
   {
@@ -326,5 +326,47 @@ export const INITIAL_LEAVES: LeaveRequest[] = [
     status: 'Approved',
     submittedAt: '2026-09-18',
     remarks: 'Approved by HOD Computer Science.',
+  }
+];
+
+export const INITIAL_CORRECTION_REQUESTS: AttendanceCorrectionRequest[] = [
+  {
+    id: 'req-1',
+    rollNo: 'CSE25F145',
+    studentName: 'Shahid Ali',
+    department: 'CSE',
+    date: getTodayDateString(),
+    subject: 'Data Structure',
+    currentStatus: 'Absent',
+    requestedStatus: 'Present',
+    reason: 'Was present in Data Structures practical lab; roll call missed during code demo.',
+    status: 'Pending',
+    submittedAt: 'Today, 09:15 AM',
+  },
+  {
+    id: 'req-2',
+    rollNo: 'CSE25F146',
+    studentName: 'Ahmed Khan',
+    department: 'CSE',
+    date: getTodayDateString(),
+    subject: 'Python',
+    currentStatus: 'Absent',
+    requestedStatus: 'Present',
+    reason: 'Attended session; marked absent due to temporary network disconnection.',
+    status: 'Pending',
+    submittedAt: 'Today, 09:30 AM',
+  },
+  {
+    id: 'req-3',
+    rollNo: 'CSE25F147',
+    studentName: 'Rahul Patil',
+    department: 'CSE',
+    date: getTodayDateString(),
+    subject: 'JavaScript',
+    currentStatus: 'Absent',
+    requestedStatus: 'Present',
+    reason: 'Submitted assignment hardcopy physically to Prof. Kulkarni at start of lecture.',
+    status: 'Pending',
+    submittedAt: 'Today, 10:05 AM',
   }
 ];

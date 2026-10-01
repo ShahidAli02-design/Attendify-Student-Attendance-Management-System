@@ -196,7 +196,7 @@ export const LandingDashboard: React.FC<LandingDashboardProps> = ({
                 </div>
                 <div className="flex items-center gap-1.5">
                   <CheckCircle2 className="h-3.5 w-3.5 text-blue-600" />
-                  <span>Attendance Goal Calculator</span>
+                  <span>Dispute Queue (FIFO)</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <CheckCircle2 className="h-3.5 w-3.5 text-blue-600" />
@@ -254,7 +254,7 @@ export const LandingDashboard: React.FC<LandingDashboardProps> = ({
               <div>
                 <h3 className="text-2xl font-black text-slate-900">Admin Dashboard</h3>
                 <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                  Real-time master attendance roll call, single-click Present/Absent toggles, student filtering by Roll No or Name, leave request approvals, and institutional CSV reports.
+                  Real-time master attendance roll call, single-click Present/Absent toggles, student filtering by Roll No or Name, FIFO correction queue resolution, and institutional CSV reports.
                 </p>
               </div>
 
@@ -270,11 +270,11 @@ export const LandingDashboard: React.FC<LandingDashboardProps> = ({
                 </div>
                 <div className="flex items-center gap-1.5">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                  <span>Low Attendance Alerts (&lt;75%)</span>
+                  <span>Correction Queue (FIFO Desk)</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                  <span>Export CSV Sheets & Leaves Desk</span>
+                  <span>Export CSV Sheets & Leaves</span>
                 </div>
               </div>
             </div>
