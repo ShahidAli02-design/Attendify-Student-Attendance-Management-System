@@ -11,11 +11,13 @@ import {
   LayoutDashboard
 } from 'lucide-react';
 
+export type ActiveView = 'college-dashboard' | 'admin-dashboard' | 'student-profile';
+
 interface NavbarProps {
   session: AuthSession;
+  activeView: ActiveView;
   currentStudent: Student | null;
-  onGoHome: () => void;
-  onSwitchRole: (role: 'student' | 'admin') => void;
+  onSelectView: (view: ActiveView) => void;
   onOpenAuth: (tab?: 'login' | 'register' | 'admin') => void;
   onOpenVivaModal: () => void;
   onResetData: () => void;
@@ -23,9 +25,9 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({
   session,
+  activeView,
   currentStudent,
-  onGoHome,
-  onSwitchRole,
+  onSelectView,
   onOpenAuth,
   onOpenVivaModal,
   onResetData,
@@ -36,7 +38,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         
         {/* Logo & College Branding */}
         <div 
-          onClick={onGoHome}
+          onClick={() => onSelectView('college-dashboard')}
           className="flex items-center gap-3 cursor-pointer group"
           title="Return to College Landing Dashboard"
         >
@@ -56,23 +58,72 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Quick Role Switcher, Home Link & Practical Tools */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          
-          {/* Main Dashboard / Home Link */}
+        {/* 3 Main View Tabs: College Portal | Admin Dashboard | Student Profile */}
+        <div className="hidden lg:flex items-center rounded-xl border border-slate-200 bg-slate-100 p-1 text-xs font-bold">
           <button
-            onClick={onGoHome}
-            className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all ${
-              !session.role
-                ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-2xs'
-                : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+            onClick={() => onSelectView('college-dashboard')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+              activeView === 'college-dashboard'
+                ? 'bg-white text-blue-700 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
             }`}
-            title="Main College Portal Dashboard"
           >
             <Home className="h-3.5 w-3.5" />
-            <span className="hidden md:inline">College Dashboard</span>
-            <span className="md:hidden">Home</span>
+            <span>College Portal</span>
           </button>
+
+          <button
+            onClick={() => onSelectView('admin-dashboard')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+              activeView === 'admin-dashboard'
+                ? 'bg-white text-emerald-700 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+            <span>Admin Dashboard</span>
+          </button>
+
+          <button
+            onClick={() => onSelectView('student-profile')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all ${
+              activeView === 'student-profile'
+                ? 'bg-white text-blue-700 shadow-xs'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <UserCheck className="h-3.5 w-3.5 text-blue-600" />
+            <span>Student Profile</span>
+          </button>
+        </div>
+
+        {/* Action Controls & Small Screen Switcher */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          
+          {/* Mobile view dropdown or quick toggle */}
+          <div className="lg:hidden flex items-center rounded-lg border border-slate-200 bg-slate-100 p-0.5">
+            <button
+              onClick={() => onSelectView('college-dashboard')}
+              title="College Portal"
+              className={`p-1.5 rounded-md ${activeView === 'college-dashboard' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600'}`}
+            >
+              <Home className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => onSelectView('admin-dashboard')}
+              title="Admin Dashboard"
+              className={`p-1.5 rounded-md ${activeView === 'admin-dashboard' ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-600'}`}
+            >
+              <ShieldCheck className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => onSelectView('student-profile')}
+              title="Student Profile"
+              className={`p-1.5 rounded-md ${activeView === 'student-profile' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600'}`}
+            >
+              <UserCheck className="h-4 w-4" />
+            </button>
+          </div>
 
           {/* Viva Practical Guide Button */}
           <button
@@ -81,49 +132,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             title="Practical Exam & Viva Concept Guide"
           >
             <Code2 className="h-4 w-4 text-indigo-600" />
-            <span className="hidden md:inline">Viva Concepts Guide</span>
-            <span className="md:hidden">Viva</span>
+            <span className="hidden md:inline">Viva Guide</span>
           </button>
 
-          {/* Role Indicator & Quick Switcher */}
+          {/* User Sign In / Account Info */}
           {session.role ? (
-            <div className="flex items-center rounded-lg border border-slate-200 bg-slate-100 p-1">
-              <button
-                onClick={() => onSwitchRole('student')}
-                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition-all ${
-                  session.role === 'student'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <UserCheck className="h-3.5 w-3.5" />
-                <span>Student</span>
-              </button>
-              <button
-                onClick={() => onSwitchRole('admin')}
-                className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition-all ${
-                  session.role === 'admin'
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <ShieldCheck className="h-3.5 w-3.5" />
-                <span>Admin</span>
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => onOpenAuth('login')}
-              className="rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-blue-500 transition-colors"
-            >
-              Sign In
-            </button>
-          )}
-
-          {/* User profile / Log out */}
-          {session.role && (
             <div className="flex items-center gap-2 border-l border-slate-200 pl-2">
-              <div className="hidden text-right lg:block">
+              <div className="hidden text-right xl:block">
                 <p className="text-xs font-bold text-slate-800">
                   {session.role === 'admin' ? 'Faculty Admin' : (currentStudent?.name || session.name || 'Shahid Ali')}
                 </p>
@@ -133,13 +148,20 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
 
               <button
-                onClick={onGoHome}
-                title="Sign out & return to College Dashboard"
+                onClick={() => onOpenAuth('login')}
+                title="Switch Account"
                 className="rounded-lg border border-slate-200 bg-white p-2 text-slate-600 transition-colors hover:border-slate-300 hover:text-slate-900 hover:bg-slate-50"
               >
                 <LogOut className="h-4 w-4" />
               </button>
             </div>
+          ) : (
+            <button
+              onClick={() => onOpenAuth('login')}
+              className="rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-blue-500 transition-colors"
+            >
+              Sign In
+            </button>
           )}
 
           {/* Reset Demo Data Button */}

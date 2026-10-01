@@ -5,7 +5,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig(() => {
   return {
-    base: '/Attendify-Student-Attendance-Management-System/',
+    base: process.env.NODE_ENV === 'production' ? '/Attendify-Student-Attendance-Management-System/' : '/',
 
     plugins: [react(), tailwindcss()],
 

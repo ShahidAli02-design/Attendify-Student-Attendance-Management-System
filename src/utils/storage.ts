@@ -4,10 +4,10 @@ import { INITIAL_STUDENTS, INITIAL_ATTENDANCE, INITIAL_LEAVES, getTodayDateStrin
 export { getTodayDateString };
 
 const STORAGE_KEYS = {
-  STUDENTS: 'attendify_students_v1',
-  ATTENDANCE: 'attendify_attendance_v1',
-  LEAVES: 'attendify_leaves_v1',
-  SESSION: 'attendify_session_v1',
+  STUDENTS: 'attendify_students_v2',
+  ATTENDANCE: 'attendify_attendance_v2',
+  LEAVES: 'attendify_leaves_v2',
+  SESSION: 'attendify_session_v2',
 };
 
 // 1. Functions & Storage Loaders

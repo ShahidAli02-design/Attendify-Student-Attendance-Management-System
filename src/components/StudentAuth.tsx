@@ -144,9 +144,9 @@ export const StudentAuth: React.FC<StudentAuthProps> = ({
       password: regPassword,
       subjects: [
         { id: `sub-${Date.now()}-1`, name: 'JavaScript', code: 'CS201', faculty: 'Prof. A. Kulkarni', attended: 16, total: 20, percentage: 80 },
-        { id: `sub-${Date.now()}-2`, name: 'React', code: 'CS202', faculty: 'Dr. S. Mehta', attended: 15, total: 18, percentage: 83 },
+        { id: `sub-${Date.now()}-2`, name: 'Data Structure', code: 'CS202', faculty: 'Dr. S. Mehta', attended: 15, total: 18, percentage: 83 },
         { id: `sub-${Date.now()}-3`, name: 'Python', code: 'CS203', faculty: 'Prof. V. Sharma', attended: 21, total: 25, percentage: 84 },
-        { id: `sub-${Date.now()}-4`, name: 'Programming', code: 'CS204', faculty: 'Prof. R. Deshmukh', attended: 22, total: 25, percentage: 88 },
+        { id: `sub-${Date.now()}-4`, name: 'IOT', code: 'CS204', faculty: 'Prof. R. Deshmukh', attended: 22, total: 25, percentage: 88 },
       ],
       overallAttendance: 84,
       createdAt: new Date().toISOString().split('T')[0],

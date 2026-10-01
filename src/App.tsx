@@ -19,7 +19,7 @@ import {
   resetToInitialDemoData,
   getTodayDateString
 } from './utils/storage';
-import { Navbar } from './components/Navbar';
+import { Navbar, ActiveView } from './components/Navbar';
 import { LandingDashboard } from './components/LandingDashboard';
 import { StudentProfile } from './components/StudentProfile';
 import { AdminDashboard } from './components/AdminDashboard';
@@ -35,7 +35,10 @@ export default function App() {
   const [attendanceList, setAttendanceList] = useState<DailyAttendanceRecord[]>(getStoredAttendance);
   const [leaves, setLeaves] = useState<LeaveRequest[]>(getStoredLeaves);
 
-  // 2. UI Modals & Navigation state
+  // 2. Active View State: Defaults to College Dashboard so landing portal is always the first screen!
+  const [activeView, setActiveView] = useState<ActiveView>('college-dashboard');
+
+  // 3. UI Modals & Navigation state
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
   const [authDefaultTab, setAuthDefaultTab] = useState<'login' | 'register' | 'admin'>('login');
   const [isVivaModalOpen, setIsVivaModalOpen] = useState<boolean>(false);
@@ -67,15 +70,16 @@ export default function App() {
     return students.find((s) => s.rollNo.toUpperCase() === session.rollNo?.toUpperCase()) || students[0] || null;
   }, [session.rollNo, students]);
 
-  // Switch active role (Student <-> Admin)
-  const handleSwitchRole = (newRole: 'student' | 'admin') => {
-    if (newRole === 'admin') {
+  // View Navigation Handler (College Dashboard, Admin Dashboard, Student Profile)
+  const handleSelectView = (view: ActiveView) => {
+    setActiveView(view);
+    if (view === 'admin-dashboard' && session.role !== 'admin') {
       setSession({
         role: 'admin',
         name: 'Faculty Admin',
         email: 'admin@prpcem.ac.in',
       });
-    } else {
+    } else if (view === 'student-profile' && session.role !== 'student') {
       const targetRoll = currentStudent?.rollNo || 'CSE25F145';
       const target = students.find((s) => s.rollNo === targetRoll) || students[0];
       setSession({
@@ -87,16 +91,42 @@ export default function App() {
     }
   };
 
+  // Switch active role (Student <-> Admin)
+  const handleSwitchRole = (newRole: 'student' | 'admin') => {
+    if (newRole === 'admin') {
+      setSession({
+        role: 'admin',
+        name: 'Faculty Admin',
+        email: 'admin@prpcem.ac.in',
+      });
+      setActiveView('admin-dashboard');
+    } else {
+      const targetRoll = currentStudent?.rollNo || 'CSE25F145';
+      const target = students.find((s) => s.rollNo === targetRoll) || students[0];
+      setSession({
+        role: 'student',
+        rollNo: target.rollNo,
+        name: target.name,
+        email: target.email,
+      });
+      setActiveView('student-profile');
+    }
+  };
+
   // Login handler
   const handleLoginSuccess = (newSession: AuthSession, targetStudent?: Student) => {
     setSession(newSession);
     setIsAuthModalOpen(false);
+    if (newSession.role === 'admin') {
+      setActiveView('admin-dashboard');
+    } else {
+      setActiveView('student-profile');
+    }
   };
 
   // Student registration handler
   const handleRegisterStudent = (newStudent: Student) => {
     setStudents((prev) => [newStudent, ...prev]);
-    // Also create initial attendance record for today
     const newRecord: DailyAttendanceRecord = {
       id: `att-${Date.now()}`,
       date: getTodayDateString(),
@@ -119,6 +149,7 @@ export default function App() {
       name: student.name,
       email: student.email,
     });
+    setActiveView('student-profile');
   };
 
   const handleQuickEnterAdmin = () => {
@@ -127,6 +158,7 @@ export default function App() {
       name: 'Faculty Admin',
       email: 'admin@prpcem.ac.in',
     });
+    setActiveView('admin-dashboard');
   };
 
   // Admin marks single student attendance status (Present / Absent)
@@ -222,6 +254,7 @@ export default function App() {
       setAttendanceList(getStoredAttendance());
       setLeaves(getStoredLeaves());
       setSession({ role: null });
+      setActiveView('college-dashboard');
     }
   };
 
@@ -231,9 +264,9 @@ export default function App() {
       {/* Top Navigation */}
       <Navbar
         session={session}
+        activeView={activeView}
         currentStudent={currentStudent}
-        onGoHome={() => setSession({ role: null })}
-        onSwitchRole={handleSwitchRole}
+        onSelectView={handleSelectView}
         onOpenAuth={(tab) => {
           setAuthDefaultTab(tab || 'login');
           setIsAuthModalOpen(true);
@@ -246,11 +279,11 @@ export default function App() {
       <main className="flex-1 mx-auto w-full max-w-7xl px-4 py-6 sm:px-6">
         
         {/* Render:
-            1. Admin Dashboard if role === 'admin'
-            2. Student Profile if role === 'student'
-            3. Landing Dashboard (College Overview Gateway) if role === null
+            1. Admin Dashboard if activeView === 'admin-dashboard'
+            2. Student Profile if activeView === 'student-profile'
+            3. Landing Dashboard (College Portal Overview) if activeView === 'college-dashboard'
         */}
-        {session.role === 'admin' ? (
+        {activeView === 'admin-dashboard' ? (
           <AdminDashboard
             students={students}
             attendanceList={attendanceList}
@@ -264,11 +297,12 @@ export default function App() {
                 name: student.name,
                 email: student.email,
               });
+              setActiveView('student-profile');
             }}
             onAddNewStudent={(newStudent) => setStudents((prev) => [newStudent, ...prev])}
             onUpdateLeaveStatus={handleUpdateLeaveStatus}
           />
-        ) : session.role === 'student' && currentStudent ? (
+        ) : activeView === 'student-profile' && currentStudent ? (
           <StudentProfile
             student={currentStudent}
             attendanceHistory={attendanceList}
@@ -299,13 +333,25 @@ export default function App() {
           <span>Attendify · PRPCEM (P. R. Pote Patil College of Engineering and Management)</span>
           <div className="flex items-center gap-3">
             <button 
+              onClick={() => handleSelectView('college-dashboard')}
+              className="text-slate-600 hover:text-blue-700 font-medium"
+            >
+              College Portal
+            </button>
+            <span>·</span>
+            <button 
+              onClick={() => handleSelectView('admin-dashboard')}
+              className="text-slate-600 hover:text-emerald-700 font-medium"
+            >
+              Admin Dashboard
+            </button>
+            <span>·</span>
+            <button 
               onClick={() => setIsVivaModalOpen(true)} 
               className="text-blue-700 hover:underline font-semibold"
             >
-              Practical Code Concepts Guide
+              Practical Viva Guide
             </button>
-            <span>·</span>
-            <span>Browser LocalStorage Active</span>
           </div>
         </div>
       </footer>

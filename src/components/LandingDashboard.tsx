@@ -180,7 +180,7 @@ export const LandingDashboard: React.FC<LandingDashboardProps> = ({
               <div>
                 <h3 className="text-2xl font-black text-slate-900">Student Portal</h3>
                 <p className="text-xs text-slate-600 mt-1 leading-relaxed">
-                  View individual subject attendance breakdown (JavaScript, React, Python, Programming), interactive 7-session trend charts, exam clearance status, and download official attendance cards.
+                  View individual subject attendance breakdown (JavaScript, Data Structure, Python, IOT), interactive 7-session trend charts, exam clearance status, and download official attendance cards.
                 </p>
               </div>
 
